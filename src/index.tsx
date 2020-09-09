@@ -170,7 +170,7 @@ type CommonProps = {
    * 0 => closed
    * 1 => fully opened
    */
-  animatedPosition?: Animated.Value<number>;
+  animatedPositions: Array<Animated.Value<number>>;
   /**
    * This value is useful if you want to take into consideration safe area insets
    * when applying percentages for snapping points. We recommend using react-native-safe-area-context
@@ -681,7 +681,7 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
       initialSnapIndex,
       componentType,
       onSettle,
-      animatedPosition,
+      animatedPositions,
       containerStyle,
       ...rest
     } = this.props;
@@ -738,16 +738,14 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
               />
             </NativeViewGestureHandler>
           </Animated.View>
-        </PanGestureHandler>
-        {this.props.animatedPosition && (
-          <Animated.Code
-            exec={onChange(
-              this.position,
-              set(this.props.animatedPosition, this.position)
-            )}
-          />
-        )}
-        <Animated.Code
+            </PanGestureHandler>
+            <Animated.Code
+              exec={onChange(
+                this.position,
+                this.props.animatedPositions.map((pos) => set(pos, this.position)),
+              )}
+            />
+            <Animated.Code
           exec={onChange(
             this.dragY,
             cond(not(eq(this.dragY, 0)), set(this.prevDragY, this.dragY))
