@@ -765,20 +765,20 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
               ),
               set(this.nextSnapIndex, 0),
               set(this.destSnapPoint, this.calculateNextSnapPoint()),
-              cond(
-                and(
-                  greaterThan(this.dragY, this.lastStartScrollY),
-                  this.isAndroid,
-                  not(this.dragWithHandle)
-                ),
-                call([], () => {
-                  // This prevents the scroll glide from happening on Android when pulling down with inertia.
-                  // It's not perfect, but does the job for now
-                  const { method, args } = imperativeScrollOptions[
-                    this.props.componentType
-                  ];
-                  // @ts-ignore
-                  const node = this.props.innerRef.current?.getNode();
+                  // cond(
+                  //   and(
+                  //     greaterThan(this.dragY, this.lastStartScrollY),
+                  //     this.isAndroid,
+                  //     not(this.dragWithHandle)
+                  //   ),
+                  //   call([], () => {
+                  //     // This prevents the scroll glide from happening on Android when pulling down with inertia.
+                  //     // It's not perfect, but does the job for now
+                  //     const { method, args } = imperativeScrollOptions[
+                  //       this.props.componentType
+                  //     ];
+                  //     // @ts-ignore
+                  //     const node = this.props.innerRef.current?.getNode();
 
                   if (
                     node &&
