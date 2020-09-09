@@ -56,6 +56,7 @@ import {
   TapGestureHandler,
 } from 'react-native-gesture-handler';
 import { Assign } from 'utility-types';
+import { BlurView } from '@react-native-community/blur';
 
 const {
   interpolate: interpolateDeprecated,
@@ -195,6 +196,10 @@ type CommonProps = {
    * Allow drawer to be dragged beyond lowest snap point
    */
   enableOverScroll: boolean;
+  /*
+   * Change opacity of content concealer view
+   */
+  concealerOpacity?: Animated.Value<number>;
 };
 
 type TimingAnimationProps = {
@@ -683,61 +688,77 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
       onSettle,
       animatedPositions,
       containerStyle,
+      concealerOpacity,
       ...rest
     } = this.props;
     const AnimatedScrollableComponent = this.scrollComponent;
     const normalisedSnapPoints = this.getNormalisedSnapPoints();
     const initialSnap = normalisedSnapPoints[initialSnapIndex];
+    const BackgroundView = Platform.select({ android: View, ios: BlurView });
 
     const Content = (
       <Animated.View
         style={[
           StyleSheet.absoluteFillObject,
           containerStyle,
+          styles.contentContainer,
           // @ts-ignore
           {
             transform: [{ translateY: this.translateY }],
           },
         ]}
       >
-        <PanGestureHandler
-          ref={this.drawerHandleRef}
-          shouldCancelWhenOutside={false}
-          simultaneousHandlers={this.masterDrawer}
-          onGestureEvent={this.onHandleGestureEvent}
-          onHandlerStateChange={this.onHandleGestureEvent}
-        >
-          <Animated.View>{renderHandle()}</Animated.View>
-        </PanGestureHandler>
-        <PanGestureHandler
-          ref={this.drawerContentRef}
-          simultaneousHandlers={[this.scrollComponentRef, this.masterDrawer]}
-          shouldCancelWhenOutside={false}
-          onGestureEvent={this.onDrawerGestureEvent}
-          onHandlerStateChange={this.onDrawerGestureEvent}
-        >
-          <Animated.View style={styles.container}>
-            <NativeViewGestureHandler
-              ref={this.scrollComponentRef}
-              waitFor={this.masterDrawer}
-              simultaneousHandlers={this.drawerContentRef}
-            >
-              <AnimatedScrollableComponent
-                overScrollMode="never"
-                bounces={false}
-                {...rest}
-                ref={this.props.innerRef}
-                // @ts-ignore
-                decelerationRate={this.decelerationRate}
-                onScrollBeginDrag={this.onScrollBeginDrag}
-                scrollEventThrottle={1}
-                contentContainerStyle={[
-                  rest.contentContainerStyle,
-                  { paddingBottom: this.getNormalisedSnapPoints()[0] },
-                ]}
+        <View style={styles.backgroundViewContainer}>
+          {
+            concealerOpacity && (
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.concealerView, { opacity: concealerOpacity.interpolate({ inputRange: [0.25, 1], outputRange: [0, 0.25] }) }]}
               />
-            </NativeViewGestureHandler>
-          </Animated.View>
+            )
+          }
+          <BackgroundView
+            blurType={Platform.OS === 'ios' ? "chromeMaterial" : undefined}
+            style={styles.backgroundView}
+          >
+            <PanGestureHandler
+              ref={this.drawerHandleRef}
+              shouldCancelWhenOutside={false}
+              simultaneousHandlers={this.masterDrawer}
+              onGestureEvent={this.onHandleGestureEvent}
+              onHandlerStateChange={this.onHandleGestureEvent}
+            >
+              <Animated.View>{renderHandle()}</Animated.View>
+            </PanGestureHandler>
+            <PanGestureHandler
+              ref={this.drawerContentRef}
+              simultaneousHandlers={[this.scrollComponentRef, this.masterDrawer]}
+              shouldCancelWhenOutside={false}
+              onGestureEvent={this.onDrawerGestureEvent}
+              onHandlerStateChange={this.onDrawerGestureEvent}
+            >
+              <Animated.View style={styles.container}>
+                <NativeViewGestureHandler
+                  ref={this.scrollComponentRef}
+                  waitFor={this.masterDrawer}
+                  simultaneousHandlers={this.drawerContentRef}
+                >
+                  <AnimatedScrollableComponent
+                    overScrollMode="never"
+                    bounces={false}
+                    {...rest}
+                    ref={this.props.innerRef}
+                    // @ts-ignore
+                    decelerationRate={this.decelerationRate}
+                    onScrollBeginDrag={this.onScrollBeginDrag}
+                    scrollEventThrottle={1}
+                    contentContainerStyle={[
+                      rest.contentContainerStyle,
+                      { paddingBottom: this.getNormalisedSnapPoints()[0] },
+                    ]}
+                  />
+                </NativeViewGestureHandler>
+              </Animated.View>
             </PanGestureHandler>
             <Animated.Code
               exec={onChange(
@@ -746,23 +767,23 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
               )}
             />
             <Animated.Code
-          exec={onChange(
-            this.dragY,
-            cond(not(eq(this.dragY, 0)), set(this.prevDragY, this.dragY))
-          )}
-        />
-        <Animated.Code
-          exec={onChange(
-            this.didGestureFinish,
-            cond(this.didGestureFinish, [
-              this.didScrollUpAndPullDown,
-              this.setTranslationY,
-              set(
-                this.tempDestSnapPoint,
-                add(normalisedSnapPoints[0], this.extraOffset)
-              ),
-              set(this.nextSnapIndex, 0),
-              set(this.destSnapPoint, this.calculateNextSnapPoint()),
+              exec={onChange(
+                this.dragY,
+                cond(not(eq(this.dragY, 0)), set(this.prevDragY, this.dragY))
+              )}
+            />
+            <Animated.Code
+              exec={onChange(
+                this.didGestureFinish,
+                cond(this.didGestureFinish, [
+                  this.didScrollUpAndPullDown,
+                  this.setTranslationY,
+                  set(
+                    this.tempDestSnapPoint,
+                    add(normalisedSnapPoints[0], this.extraOffset)
+                  ),
+                  set(this.nextSnapIndex, 0),
+                  set(this.destSnapPoint, this.calculateNextSnapPoint()),
                   // cond(
                   //   and(
                   //     greaterThan(this.dragY, this.lastStartScrollY),
@@ -778,74 +799,76 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
                   //     // @ts-ignore
                   //     const node = this.props.innerRef.current?.getNode();
 
-                  if (
-                    node &&
-                    node[method] &&
-                    ((this.props.componentType === 'FlatList' &&
-                      (this.props?.data?.length || 0) > 0) ||
-                      (this.props.componentType === 'SectionList' &&
-                        this.props.sections.length > 0) ||
-                      this.props.componentType === 'ScrollView')
-                  ) {
-                    node[method](args);
-                  }
-                })
-              ),
-              set(this.dragY, 0),
-              set(this.velocityY, 0),
-              set(
-                this.lastSnap,
-                sub(
-                  this.destSnapPoint,
-                  cond(
-                    eq(this.scrollUpAndPullDown, 1),
-                    this.lastStartScrollY,
-                    0
-                  )
-                )
-              ),
-              call([this.lastSnap], ([value]) => {
-                // This is the TapGHandler trick
-                // @ts-ignore
-                this.masterDrawer?.current?.setNativeProps({
-                  maxDeltaY: value - this.getNormalisedSnapPoints()[0],
-                });
-              }),
-              set(
-                this.decelerationRate,
-                cond(
-                  eq(this.isAndroid, 1),
-                  cond(
-                    eq(this.lastSnap, normalisedSnapPoints[0]),
-                    ANDROID_NORMAL_DECELERATION_RATE,
-                    0
+                  //     if (
+                  //       node &&
+                  //       node[method] &&
+                  //       ((this.props.componentType === 'FlatList' &&
+                  //         (this.props?.data?.length || 0) > 0) ||
+                  //         (this.props.componentType === 'SectionList' &&
+                  //           this.props.sections.length > 0) ||
+                  //         this.props.componentType === 'ScrollView')
+                  //     ) {
+                  //       node[method](args);
+                  //     }
+                  //   })
+                  // ),
+                  set(this.dragY, 0),
+                  set(this.velocityY, 0),
+                  set(
+                    this.lastSnap,
+                    sub(
+                      this.destSnapPoint,
+                      cond(
+                        eq(this.scrollUpAndPullDown, 1),
+                        this.lastStartScrollY,
+                        0
+                      )
+                    )
                   ),
-                  IOS_NORMAL_DECELERATION_RATE
-                )
-              ),
-            ])
-          )}
-        />
-        <Animated.Code
-          exec={onChange(this.isManuallySetValue, [
-            cond(
-              this.isManuallySetValue,
-              [
-                set(this.destSnapPoint, this.manualYOffset),
-                set(this.animationFinished, 0),
-                set(this.lastSnap, this.manualYOffset),
-                call([this.lastSnap], ([value]) => {
-                  // This is the TapGHandler trick
-                  // @ts-ignore
-                  this.masterDrawer?.current?.setNativeProps({
-                    maxDeltaY: value - this.getNormalisedSnapPoints()[0],
-                  });
-                }),
-              ],
-              [set(this.nextSnapIndex, 0)]
-            ),
-          ])}
-        />
+                  call([this.lastSnap], ([value]) => {
+                    // This is the TapGHandler trick
+                    // @ts-ignore
+                    this.masterDrawer?.current?.setNativeProps({
+                      maxDeltaY: value - this.getNormalisedSnapPoints()[0],
+                    });
+                  }),
+                  set(
+                    this.decelerationRate,
+                    cond(
+                      eq(this.isAndroid, 1),
+                      cond(
+                        eq(this.lastSnap, normalisedSnapPoints[0]),
+                        ANDROID_NORMAL_DECELERATION_RATE,
+                        0
+                      ),
+                      IOS_NORMAL_DECELERATION_RATE
+                    )
+                  ),
+                ])
+              )}
+            />
+            <Animated.Code
+              exec={onChange(this.isManuallySetValue, [
+                cond(
+                  this.isManuallySetValue,
+                  [
+                    set(this.destSnapPoint, this.manualYOffset),
+                    set(this.animationFinished, 0),
+                    set(this.lastSnap, this.manualYOffset),
+                    call([this.lastSnap], ([value]) => {
+                      // This is the TapGHandler trick
+                      // @ts-ignore
+                      this.masterDrawer?.current?.setNativeProps({
+                        maxDeltaY: value - this.getNormalisedSnapPoints()[0],
+                      });
+                    }),
+                  ],
+                  [set(this.nextSnapIndex, 0)]
+                ),
+              ])}
+            />
+          </BackgroundView>
+        </View>
       </Animated.View>
     );
 
@@ -854,6 +877,7 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
     if (Platform.OS === 'android') {
       return (
         <TapGestureHandler
+          
           maxDurationMs={100000}
           ref={this.masterDrawer}
           maxDeltaY={initialSnap - this.getNormalisedSnapPoints()[0]}
@@ -883,8 +907,38 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
 
 export default ScrollBottomSheet;
 
+const BACKGROUND_COLOR = Platform.select({ android: 'white', ios: 'transparent' });
+
 const styles = StyleSheet.create({
+  backgroundView: {
+    flexGrow: 1,
+  },
+
+  backgroundViewContainer: {
+    borderRadius: 10,
+    flexGrow: 1,
+    overflow: 'hidden',
+  },
+
+  concealerView: {
+    backgroundColor: 'black',
+    height: '100%',
+    left: 0,
+    position: 'absolute',
+    top: 0,
+    width: '100%',
+    zIndex: 9999,
+  },
+
   container: {
     flex: 1,
+  },
+
+  contentContainer: {
+    backgroundColor: BACKGROUND_COLOR,
+    borderRadius: 10,
+    elevation: 50,
+    shadowOpacity: 0.075,
+    shadowRadius: 15,
   },
 });
