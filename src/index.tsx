@@ -711,28 +711,23 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
             return (
               <Consumer>
                 {
-                  ({ data }) => {
-                    console.log(data)
-
-                    return (
-                        <AnimatedScrollableComponent
-                        overScrollMode="never"
-                        bounces={false}
-                        {...rest}
-                        ref={ref}
-                        // @ts-ignore
-                        decelerationRate={this.decelerationRate}
-                        onScrollBeginDrag={this.onScrollBeginDrag}
-                        scrollEventThrottle={1}
-                        contentContainerStyle={[
-                          rest.contentContainerStyle,
-                          { paddingBottom: this.getNormalisedSnapPoints()[0] },
-                        ]}
-                        data={Object.values(data)}
-                      />
-                    
-                      )
-                  }
+                  ({ data }) => (
+                      <AnimatedScrollableComponent
+                      overScrollMode="never"
+                      bounces={false}
+                      {...rest}
+                      ref={ref}
+                      // @ts-ignore
+                      decelerationRate={this.decelerationRate}
+                      onScrollBeginDrag={this.onScrollBeginDrag}
+                      scrollEventThrottle={1}
+                      contentContainerStyle={[
+                        rest.contentContainerStyle,
+                        { paddingBottom: this.getNormalisedSnapPoints()[0] },
+                      ]}
+                      data={Object.values(data)}
+                    />
+                  )
                 }
               </Consumer>
             )
