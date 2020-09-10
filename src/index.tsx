@@ -712,7 +712,7 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
               <Consumer>
                 {
                   ({ data }) => (
-                      <AnimatedScrollableComponent
+                    <AnimatedScrollableComponent
                       overScrollMode="never"
                       bounces={false}
                       {...rest}
@@ -726,6 +726,7 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
                         { paddingBottom: this.getNormalisedSnapPoints()[0] },
                       ]}
                       data={Object.values(data)}
+                      keyExtractor={({ key }) => key}
                     />
                   )
                 }
