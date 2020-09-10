@@ -687,14 +687,59 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
       componentType,
       onSettle,
       animatedPositions,
+      Consumers,
       containerStyle,
       concealerOpacity,
+      TabsConsumer,
       ...rest
     } = this.props;
     const AnimatedScrollableComponent = this.scrollComponent;
     const normalisedSnapPoints = this.getNormalisedSnapPoints();
     const initialSnap = normalisedSnapPoints[initialSnapIndex];
     const BackgroundView = Platform.select({ android: View, ios: BlurView });
+
+    const ContextWrapper = React.forwardRef((_props, ref) => (
+      <TabsConsumer>
+        {
+          ({ tab }) => {
+            if (tab === 2) {
+              return;
+            }
+
+            const Consumer = Consumers[tab];
+
+            return (
+              <Consumer>
+                {
+                  ({ data }) => {
+                    console.log(data)
+
+                    return (
+                        <AnimatedScrollableComponent
+                        overScrollMode="never"
+                        bounces={false}
+                        {...rest}
+                        ref={ref}
+                        // @ts-ignore
+                        decelerationRate={this.decelerationRate}
+                        onScrollBeginDrag={this.onScrollBeginDrag}
+                        scrollEventThrottle={1}
+                        contentContainerStyle={[
+                          rest.contentContainerStyle,
+                          { paddingBottom: this.getNormalisedSnapPoints()[0] },
+                        ]}
+                        data={Object.values(data)}
+                      />
+                    
+                      )
+                  }
+                }
+              </Consumer>
+            )
+          }
+        }
+      </TabsConsumer>
+    ));
 
     const Content = (
       <Animated.View
@@ -743,20 +788,24 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
                   waitFor={this.masterDrawer}
                   simultaneousHandlers={this.drawerContentRef}
                 >
-                  <AnimatedScrollableComponent
-                    overScrollMode="never"
-                    bounces={false}
-                    {...rest}
-                    ref={this.props.innerRef}
-                    // @ts-ignore
-                    decelerationRate={this.decelerationRate}
-                    onScrollBeginDrag={this.onScrollBeginDrag}
-                    scrollEventThrottle={1}
-                    contentContainerStyle={[
-                      rest.contentContainerStyle,
-                      { paddingBottom: this.getNormalisedSnapPoints()[0] },
-                    ]}
-                  />
+                  {
+                    Consumers && <ContextWrapper /> || (
+                      <AnimatedScrollableComponent
+                        overScrollMode="never"
+                        bounces={false}
+                        {...rest}
+                        ref={this.props.innerRef}
+                        // @ts-ignore
+                        decelerationRate={this.decelerationRate}
+                        onScrollBeginDrag={this.onScrollBeginDrag}
+                        scrollEventThrottle={1}
+                        contentContainerStyle={[
+                          rest.contentContainerStyle,
+                          { paddingBottom: this.getNormalisedSnapPoints()[0] },
+                        ]}
+                      />
+                    )
+                  }
                 </NativeViewGestureHandler>
               </Animated.View>
             </PanGestureHandler>
