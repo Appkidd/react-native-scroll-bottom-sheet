@@ -952,7 +952,7 @@ export class ScrollBottomSheet<T extends any> extends Component<Props<T>> {
 
 export default ScrollBottomSheet;
 
-const BACKGROUND_COLOR = Platform.select({ android: 'white', ios: 'transparent' });
+const BACKGROUND_COLOR = Platform.select({ android: '#FCFCFC', ios: 'transparent' });
 
 const styles = StyleSheet.create({
   backgroundView: {
